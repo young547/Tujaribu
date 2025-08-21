@@ -1,0 +1,54 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aviator Prediction</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #0f0;
+      text-align: center;
+      padding: 40px;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    #prediction {
+      font-size: 48px;
+      font-weight: bold;
+      margin-top: 30px;
+    }
+    #status {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #ccc;
+    }
+  </style>
+</head>
+<body>
+  <h1>Live Aviator Prediction</h1>
+  <div id="prediction">Loading...</div>
+  <div id="status"></div>
+
+  <script>
+    async function fetchPrediction() {
+      try {
+        const res = await fetch('/predict');
+        if (!res.ok) throw new Error('Network response was not ok');
+        const data = await res.json();
+        document.getElementById('prediction').textContent = data.predictedMultiplier.toFixed(2) + 'x';
+        document.getElementById('status').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+      } catch (e) {
+        document.getElementById('status').textContent = 'Error fetching prediction';
+      }
+    }
+
+    // Fetch every 5 seconds
+    fetchPrediction();
+    setInterval(fetchPrediction, 5000);
+  </script>
+</body>
+</html>
