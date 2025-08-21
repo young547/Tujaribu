@@ -1,76 +1,67 @@
+Here’s your updated `server.js` with Express serving your `index.html` from a `public` folder alongside your scraping and prediction API:
 
+```js
 import express from 'express';
 import puppeteer from 'puppeteer';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-let gameRounds = []; // stores recent multipliers (max 100)
+let gameRounds = [];
 
-// Add a new round multiplier, keep max 100 rounds
-function addRound(multiplier) {
-  gameRounds.push({ multiplier, timestamp: Date.now() });
-  if (gameRounds.length > 100) gameRounds.shift();
-}
+// Serve static files from 'public' folder
+app.use(express.static('public'));
 
-// Predict next multiplier using moving average of last N rounds
-function predictNext(n = 5) {
-  if (!gameRounds.length) return 1;
-  const lastRounds = gameRounds.slice(-n);
-  const avg = lastRounds.reduce((acc, r) => acc + r.multiplier, 0) / lastRounds.length;
-  return Number(avg.toFixed(2));
-}
-
-// Start Puppeteer to scrape live multipliers
-async function startScraper() {
+async function scrapeGameData() {
   const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
   const page = await browser.newPage();
-
   await page.goto('https://www.betika.com/en-ke/aviator', { waitUntil: 'networkidle2' });
-  // Wait for multiplier element to load
+
   await page.waitForSelector('div[class*="multiplier"]');
 
-  // Expose a function to be called from page context with new multiplier
-  await page.exposeFunction('onMultiplierUpdate', multiplier => {
-    const num = parseFloat(multiplier);
-    if (!isNaN(num)) {
-      console.log('New multiplier:', num);
-      addRound(num);
-    }
+  await page.exposeFunction('onRoundUpdate', (multiplier) => {
+    console.log('New multiplier:', multiplier);
+    gameRounds.push({ timestamp: Date.now(), multiplier });
+    if (gameRounds.length > 100) gameRounds.shift();
   });
 
-  // Inject MutationObserver to detect multiplier changes
   await page.evaluate(() => {
-    const target = document.querySelector('div[class*="multiplier"]');
-    if (!target) return;
+    const multiplierElement = document.querySelector('div[class*="multiplier"]');
+    if (!multiplierElement) return;
 
     const observer = new MutationObserver(mutations => {
-      for (const mutation of mutations) {
-        if (mutation.type === 'childList') {
-          const text = mutation.target.textContent;
-          const match = text.match(/(\d+(\.\d+)?)/);
-          if (match) {
-            window.onMultiplierUpdate(match[1]);
+      mutations.forEach(mutation => {
+        if (mutation.type === 'childList' || mutation.type === 'characterData') {
+        const text = multiplierElement.textContent.trim();
+          const m = text.match(/(\d+(\.\d+)?)x/);
+          if (m) {
+            window.onRoundUpdate(parseFloat(m[1]));
           }
         }
-      }
+      });
     });
 
-    observer.observe(target, { childList: true, subtree: true });
+    observer.observe(multiplierElement, { childList: true, characterData: true, subtree: true });
   });
 
-  console.log('Scraper started...');
+  console.log('Scraper running...');
 }
 
-app.use(express.static('public')); // serve static UI files
+// Simple prediction: average of last 5 multipliers
+function predictNext() {
+  if (!gameRounds.length) return 1;
+  const lastFive = gameRounds.slice(-5).map(r => r.multiplier);
+  const avg = lastFive.reduce((a, b) => a + b, 0) / lastFive.length;
+  return avg;
+}
 
-// API to get current prediction
-app.get('/api/predict', (req, res) => {
-  res.json({
-    prediction: predictNext(),
-    rounds: gameRounds.slice(-10).map(r => r.multiplier),
-  });
+// API endpoint to get prediction
+app.get('/predict', (req, res) => {
+  const prediction = predictNext();
+  res.json({ predictedMultiplier: prediction.toFixed(2) });
 });
+
+// Start server and scraper
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
-  startScraper().catch(console.error);
+  scrapeGameData().catch(console.error);
