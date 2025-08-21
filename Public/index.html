@@ -3,52 +3,64 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Aviator Prediction</title>
+  <title>Aviator Prediction Live</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
       background: #111;
-      color: #0f0;
-      text-align: center;
-      padding: 40px;
+      color: #0ff;
+      font-family: monospace, monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
     }
     h1 {
-      margin-bottom: 20px;
+      margin-bottom: 0.5rem;
     }
-    #prediction {
-      font-size: 48px;
-      font-weight: bold;
-      margin-top: 30px;
+    .prediction {
+      font-size: 3rem;
+      margin: 1rem 0;
     }
-    #status {
-      margin-top: 10px;
-      font-size: 14px;
+    .details {
+      font-size: 1.2rem;
       color: #ccc;
+    }
+    .status {
+      margin-top: 2rem;
+      font-style: italic;
+      color: #555;
     }
   </style>
 </head>
 <body>
-  <h1>Live Aviator Prediction</h1>
-  <div id="prediction">Loading...</div>
-  <div id="status"></div>
+  <h1>Aviator Predicted Multiplier</h1>
+  <div class="prediction" id="multiplier">Loading...</div>
+  <div class="details" id="details"></div>
+  <div class="status" id="status">Waiting for updates...</div>
 
   <script>
-    async function fetchPrediction() {
-      try {
-        const res = await fetch('/predict');
-        if (!res.ok) throw new Error('Network response was not ok');
-        const data = await res.json();
-        document.getElementById('prediction').textContent = data.predictedMultiplier.toFixed(2) + 'x';
-        document.getElementById('status').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
-      } catch (e) {
-        document.getElementById('status').textContent = 'Error fetching prediction';
-      }
-    }
+    const multiplierEl = document.getElementById('multiplier');
+    const detailsEl = document.getElementById('details');
+    const statusEl = document.getElementById('status');
 
-    // Fetch every 5 seconds
-    fetchPrediction();
-    setInterval(fetchPrediction, 5000);
+    const evtSource = new EventSource('/events');
+
+    evtSource.onmessage = function (event) 
+      try 
+        const data = JSON.parse(event.data);
+        multiplierEl.textContent = data.predictedMultiplier + 'x';
+        detailsEl.textContent = `Round:{data.roundId || 'N/A'} | RNG: ${data.rng || 'N/A'}`;
+        statusEl.textContent = 'Updated at ' + new Date().toLocaleTimeString();
+      } catch {
+        statusEl.textContent = 'Error parsing data';
+      }
+    };
+
+    evtSource.onerror = function () {
+      statusEl.textContent = 'Connection lost, retrying...';
+    };
   </script>
 </body>
 </html>
