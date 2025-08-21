@@ -56,7 +56,7 @@ app.get('/prediction', async (req, res) => {
     });
 
     const page = await browser.newPage();
-    await page.goto('https://www.betika.com/en-ke/aviator',  waitUntil: 'networkidle2' );
+    await page.goto('https://www.betika.com/en-ke/aviator', { waitUntil: 'networkidle2' });
 
     const multiplier = await findText(page, selectors.multiplier);
     const roundId = await findText(page, selectors.roundId);
