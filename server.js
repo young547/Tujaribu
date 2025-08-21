@@ -5,7 +5,6 @@ const puppeteer = require('puppeteer');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Possible selectors
 const selectors = {
   multiplier: [
     'div[class*="multiplier"]',
@@ -36,7 +35,6 @@ const selectors = {
   ],
 };
 
-// Helper to find valid selector
 async function findText(page, keys) {
   for (const selector of keys) {
     try {
@@ -44,18 +42,17 @@ async function findText(page, keys) {
       const text = await page.$eval(selector, el => el.textContent.trim());
       if (text) return text;
     } catch (e) {
-      // Try next
+      // continue
     }
-  }
-  return null;
-}
+    return null;
 
-app.get('/prediction', async (req, res) => {
+
+app.get('/prediction', async (req, res) => 
   let browser;
-  try {
-  browser = await puppeteer.launch(
+  try 
+    browser = await puppeteer.launch(
       headless: true,
-      args: ['–no-sandbox', '–disable-setuid-sandbox'],
+      args: ['–no-sandbox', '–disable-setuid-sandbox']
     );
 
     const page = await browser.newPage();
