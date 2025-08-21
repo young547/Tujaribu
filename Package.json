@@ -2,10 +2,14 @@
 {
   "name": "aviator-predictor",
   "version": "1.0.0",
+  "description": "Real-time Aviator multiplier predictor for Betika",
   "main": "server.js",
+  "type": "module",
   "scripts": {
     "start": "node server.js"
   },
+  "author": "raccoon",
+  "license": "ISC",
   "dependencies": {
     "express": "^4.18.2",
     "puppeteer": "^19.8.5"
