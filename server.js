@@ -1,63 +1,88 @@
 
 import express from 'express';
-import chrome from 'chrome-aws-lambda';
-import puppeteer from 'puppeteer-core';
+import puppeteer from 'puppeteer';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-let lastMultiplier = null;
+// Possible selectors for each data point (add or adjust as needed)
+const selectors = {
+  multiplier: [
+    'div[class*="multiplier"]',
+    '.multiplier-text',
+    '.multiplier-value',
+    '#multiplier',
+    'span.multiplier',
+  ],
+  roundId: [
+    'div.round-number',   // example
+    '.round-id',
+    '#round',
+  ],
+  serverSeed: [
+    'div.server-seed',
+    '.server-seed',
+    '#serverSeed',
+  ],
+  clientSeed: [
+    'div.client-seed',
+    '.client-seed',
+    '#clientSeed',
+  ],
+  combinedHash: [
+    'div.combined-hash',
+    '.combined-sha512',
+    '#combinedHash',
+  ],
+};
 
-// Try common selectors until one works
-const multiplierSelectors = [
-  'div[class*="multiplier"]',
-  '.c-multiplier',
-  '.multiplier-text',
-  '.multiplier',
-  '.result',
-];
-
-async function launchBrowser() {
-  return await puppeteer.launch({
-    args: chrome.args,
-    executablePath: await chrome.executablePath,
-    headless: chrome.headless,
-  });
+// Helper to find first selector that works and get trimmed text
+async function findText(page, keys) {
+  for (const selector of keys) {
+    try {
+      await page.waitForSelector(selector, { timeout: 1500 });
+      const text = await page.$eval(selector, el => el.textContent.trim());
+      if (text) return text;
+    } catch {
+      // ignore and try next
+    }
+  }
+  return null;
 }
 
-async function scrapeMultiplier() {
+app.get('/prediction', async (req, res) => {
   let browser;
-
   try {
-    browser = await launchBrowser();
+    browser = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
     const page = await browser.newPage();
-    await page.goto('https://www.betika.com/en-ke/aviator', { waitUntil: 'networkidle2', timeout: 60000 });
+    await page.goto('https://www.betika.com/en-ke/aviator', { waitUntil: 'networkidle2' });
 
-    await page.waitForTimeout(5000); // Wait for elements to load
+    const multiplier = await findText(page, selectors.multiplier);
+    const roundId = await findText(page, selectors.roundId);
+    const serverSeed = await findText(page, selectors.serverSeed);
+    const clientSeed = await findText(page, selectors.clientSeed);
+    const combinedHash = await findText(page, selectors.combinedHash);
 
-    let multiplier;
-
-    for (const selector of multiplierSelectors) {
-      try {
-        multiplier = await page.$eval(selector, el => el.textContent.trim());
-        if (multiplier && multiplier.includes('x')) break;
-        catch (err) 
-        // Try next selector
-      
-
-    lastMultiplier = multiplier || 'Not found';
     await browser.close();
-   catch (error) 
-    console.error('Scraper error:', error.message);
-    lastMultiplier = 'Error';
+
+    if (!multiplier) {
+      return res.status(404).json({ error: 'Multiplier not found' });
+    }
+
+    res.json({
+      roundId,
+      multiplier,
+      serverSeed,
+      clientSeed,
+      combinedHash,
+    });
+  } catch (error) {
     if (browser) await browser.close();
-  
-
-app.get('/predict', async (req, res) => 
-  await scrapeMultiplier();
-  res.json( multiplier: lastMultiplier );
-);
-
-app.listen(PORT, () => 
-  console.log(`Server running on port{PORT}`);
+    console.error('Scraping error:', error);
+    res.status(500).json({ error: 'Failed to fetch prediction' });
+  }
 });
+
+app.listen(PORT, () => {
