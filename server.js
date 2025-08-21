@@ -36,27 +36,30 @@ const selectors = {
   ],
 };
 
+// Helper to find valid selector
 async function findText(page, keys) {
   for (const selector of keys) {
     try {
-      await page.waitForSelector(selector, { timeout: 1000 });
+      await page.waitForSelector(selector, { timeout: 1500 });
       const text = await page.$eval(selector, el => el.textContent.trim());
       if (text) return text;
-      // try next
-    
+    } catch (e) {
+      // Try next
+    }
+  }
   return null;
+}
 
-
-app.get('/prediction', async (req, res) => 
+app.get('/prediction', async (req, res) => {
   let browser;
-  try 
-    browser = await puppeteer.launch(
+  try {
+  browser = await puppeteer.launch(
+      headless: true,
       args: ['–no-sandbox', '–disable-setuid-sandbox'],
     );
+
     const page = await browser.newPage();
-    await page.goto('https://www.betika.com/en-ke/aviator', 
-      waitUntil: 'networkidle2',
-    );
+    await page.goto('https://www.betika.com/en-ke/aviator',  waitUntil: 'networkidle2' );
 
     const multiplier = await findText(page, selectors.multiplier);
     const roundId = await findText(page, selectors.roundId);
@@ -77,9 +80,9 @@ app.get('/prediction', async (req, res) =>
       clientSeed,
       combinedHash,
     );
-   catch (error) 
+   catch (err) 
     if (browser) await browser.close();
-    console.error('Scraping error:', error);
+    console.error('Scraping error:', err);
     res.status(500).json( error: 'Failed to fetch prediction' );
   );
 
