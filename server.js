@@ -51,13 +51,12 @@ async function findText(page, keys) {
 }
 
 app.get('/prediction', async (req, res) => {
-  let browser;
-  try {
-    browser = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
+try 
+    browser = await puppeteer.launch(
+      args: ['–no-sandbox', '–disable-setuid-sandbox'],
+    );
     const page = await browser.newPage();
-    await page.goto('https://www.betika.com/en-ke/aviator', { waitUntil: 'networkidle2' });
+    await page.goto('https://www.betika.com/en-ke/aviator',  waitUntil: 'networkidle2' );
 
     const multiplier = await findText(page, selectors.multiplier);
     const roundId = await findText(page, selectors.roundId);
@@ -67,22 +66,23 @@ app.get('/prediction', async (req, res) => {
 
     await browser.close();
 
-    if (!multiplier) {
-      return res.status(404).json({ error: 'Multiplier not found' });
-    }
+    if (!multiplier) 
+      return res.status(404).json( error: 'Multiplier not found' );
+    
 
-    res.json({
+    res.json(
       roundId,
       multiplier,
       serverSeed,
       clientSeed,
       combinedHash,
-    });
-  } catch (error) {
+    );
+   catch (error) 
     if (browser) await browser.close();
     console.error('Scraping error:', error);
-    res.status(500).json({ error: 'Failed to fetch prediction' });
-  }
-});
+    res.status(500).json( error: 'Failed to fetch prediction' );
+  );
 
-app.listen(PORT, () => {
+app.listen(PORT, () => 
+  console.log(`Server running on port{PORT}`);
+});
