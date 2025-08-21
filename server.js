@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --- Hash to multiplier function (based on Spribe's formula) ---
+// Multiplier calculation based on the hash
 function hashToMultiplier(hash) {
   const hex = parseInt(hash.substring(0, 13), 16);
   if (hex % 33 === 0) return 1.00;
@@ -14,7 +14,6 @@ function hashToMultiplier(hash) {
   return Math.floor((100 * (2 * 52) / (2 * 52 - h)) * 100) / 100;
 }
 
-// --- Main route ---
 app.get('/predict', async (req, res) => {
   let browser;
   try {
@@ -22,17 +21,15 @@ app.get('/predict', async (req, res) => {
     const page = await browser.newPage();
     await page.goto('https://www.betika.com/en-ke/aviator', { waitUntil: 'networkidle2' });
 
-    // Optional delay to allow elements to load
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(3000); // Allow content to load
 
-    // Use multiple selectors and fallback if needed
     const getText = async (selectors) => {
       for (let sel of selectors) {
         try {
           await page.waitForSelector(sel, { timeout: 1000 });
-          const txt = await page.eval(sel, el => el.textContent.trim());
+          const txt = await page.$eval(sel, el => el.textContent.trim());
           if (txt) return txt;
-         catch (err) 
+          catch (err) 
       return null;
     ;
 
@@ -42,13 +39,14 @@ app.get('/predict', async (req, res) => {
     const actualMultiplier = await getText(['div[class*="multiplier"]', '.multiplier', 'span[class*="multiplier"]']);
 
     if (!serverSeed || !clientSeed || !nonce) 
-      return res.status(404).json( error: 'Missing data from page' );
+      return res.status(404).json( error: 'Missing seed or round data' );
     
 
-    // Construct hash
     const message = `{serverSeed}:clientSeed:{nonce}`;
     const hash = crypto.createHash('sha256').update(message).digest('hex');
     const predictedMultiplier = hashToMultiplier(hash);
+
+    await browser.close();
 
     res.json({
       serverSeed,
@@ -59,14 +57,12 @@ app.get('/predict', async (req, res) => {
       actualMultiplier
     });
 
-    await browser.close();
   } catch (error) {
     if (browser) await browser.close();
-    console.error('Error:', error);
-    res.status(500).json({ error: 'Failed to scrape or calculate' });
+    console.error('Scraping error:', error);
+    res.status(500).json({ error: 'Scraping failed' });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-});
+  console.log(`✅ Server running on port ${PORT}`);});
