@@ -1,37 +1,61 @@
 
-const express = require('express');
-const chromium = require('chrome-aws-lambda');
+import express from 'express';
+import chrome from 'chrome-aws-lambda';
+import puppeteer from 'puppeteer-core';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 let lastMultiplier = null;
 
-async function scrapeMultiplier() {
-  const browser = await chromium.puppeteer.launch({
-    args: chromium.args,
-    executablePath: await chromium.executablePath,
-    headless: chromium.headless,
-  });
+// Try common selectors until one works
+const multiplierSelectors = [
+  'div[class*="multiplier"]',
+  '.c-multiplier',
+  '.multiplier-text',
+  '.multiplier',
+  '.result',
+];
 
-  const page = await browser.newPage();
+async function launchBrowser() {
+  return await puppeteer.launch({
+    args: chrome.args,
+    executablePath: await chrome.executablePath,
+    headless: chrome.headless,
+  });
+}
+
+async function scrapeMultiplier() {
+  let browser;
+
   try {
+    browser = await launchBrowser();
+    const page = await browser.newPage();
     await page.goto('https://www.betika.com/en-ke/aviator', { waitUntil: 'networkidle2', timeout: 60000 });
 
-    await page.waitForSelector('div[class*="multiplier"]', { timeout: 15000 });
-    const multiplier = await page.$eval('div[class*="multiplier"]', el => el.textContent.trim());
+    await page.waitForTimeout(5000); // Wait for elements to load
 
-    lastMultiplier = multiplier;
-    console.log('Latest multiplier:', multiplier);
-   catch (err) 
-    console.error('Scraping error:', err.message);
-   finally 
+    let multiplier;
+
+    for (const selector of multiplierSelectors) {
+      try {
+        multiplier = await page.$eval(selector, el => el.textContent.trim());
+        if (multiplier && multiplier.includes('x')) break;
+        catch (err) 
+        // Try next selector
+      
+
+    lastMultiplier = multiplier || 'Not found';
     await browser.close();
+   catch (error) 
+    console.error('Scraper error:', error.message);
+    lastMultiplier = 'Error';
+    if (browser) await browser.close();
   
 
 app.get('/predict', async (req, res) => 
   await scrapeMultiplier();
-  res.json( multiplier: lastMultiplier || 'Not available' );
+  res.json( multiplier: lastMultiplier );
 );
 
 app.listen(PORT, () => 
