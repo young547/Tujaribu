@@ -5,6 +5,7 @@ const puppeteer = require('puppeteer');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Possible selectors
 const selectors = {
   multiplier: [
     'div[class*="multiplier"]',
@@ -14,24 +15,24 @@ const selectors = {
     'span.multiplier',
   ],
   roundId: [
-    '.round-id',
     'div.round-number',
+    '.round-id',
     '#round',
   ],
   serverSeed: [
+    'div.server-seed',
     '.server-seed',
     '#serverSeed',
-    'div.server-seed',
   ],
   clientSeed: [
+    'div.client-seed',
     '.client-seed',
     '#clientSeed',
-    'div.client-seed',
   ],
   combinedHash: [
+    'div.combined-hash',
     '.combined-sha512',
     '#combinedHash',
-    'div.combined-hash',
   ],
 };
 
@@ -41,8 +42,7 @@ async function findText(page, keys) {
       await page.waitForSelector(selector, { timeout: 1000 });
       const text = await page.$eval(selector, el => el.textContent.trim());
       if (text) return text;
-    } catch (err) {
-    // try next selector
+      // try next
     
   return null;
 
@@ -50,9 +50,13 @@ async function findText(page, keys) {
 app.get('/prediction', async (req, res) => 
   let browser;
   try 
-    browser = await puppeteer.launch( args: ['–no-sandbox'] );
+    browser = await puppeteer.launch(
+      args: ['–no-sandbox', '–disable-setuid-sandbox'],
+    );
     const page = await browser.newPage();
-    await page.goto('https://www.betika.com/en-ke/aviator',  waitUntil: 'networkidle2' );
+    await page.goto('https://www.betika.com/en-ke/aviator', 
+      waitUntil: 'networkidle2',
+    );
 
     const multiplier = await findText(page, selectors.multiplier);
     const roundId = await findText(page, selectors.roundId);
