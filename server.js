@@ -15,7 +15,7 @@ const selectors = {
     'span.multiplier',
   ],
   roundId: [
-    'div.round-number',   // example
+    'div.round-number',
     '.round-id',
     '#round',
   ],
@@ -44,17 +44,18 @@ async function findText(page, keys) {
       const text = await page.$eval(selector, el => el.textContent.trim());
       if (text) return text;
     } catch {
-      // ignore and try next
+      // ignore and try next selector
     }
-  }
-  return null;
-}
+    return null;
 
-app.get('/prediction', async (req, res) => {
-try 
+
+app.get('/prediction', async (req, res) => 
+  let browser;
+  try 
     browser = await puppeteer.launch(
       args: ['–no-sandbox', '–disable-setuid-sandbox'],
     );
+
     const page = await browser.newPage();
     await page.goto('https://www.betika.com/en-ke/aviator',  waitUntil: 'networkidle2' );
 
