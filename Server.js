@@ -1,6 +1,4 @@
-Here’s your updated `server.js` with Express serving your `index.html` from a `public` folder alongside your scraping and prediction API:
 
-```js
 import express from 'express';
 import puppeteer from 'puppeteer';
 
