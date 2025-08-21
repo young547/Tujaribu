@@ -5,7 +5,6 @@ import puppeteer from 'puppeteer';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Possible selectors for each data point (add or adjust as needed)
 const selectors = {
   multiplier: [
     'div[class*="multiplier"]',
@@ -36,7 +35,6 @@ const selectors = {
   ],
 };
 
-// Helper to find first selector that works and get trimmed text
 async function findText(page, keys) {
   for (const selector of keys) {
     try {
@@ -44,17 +42,18 @@ async function findText(page, keys) {
       const text = await page.$eval(selector, el => el.textContent.trim());
       if (text) return text;
     } catch {
-      // ignore and try next selector
+      // continue trying next selector
     }
-    return null;
+  }
+  return null;
+}
 
-
-app.get('/prediction', async (req, res) => 
+app.get('/prediction', async (req, res) => {
   let browser;
-  try 
-    browser = await puppeteer.launch(
-      args: ['–no-sandbox', '–disable-setuid-sandbox'],
-    );
+  try {
+    browser = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
 
     const page = await browser.newPage();
     await page.goto('https://www.betika.com/en-ke/aviator',  waitUntil: 'networkidle2' );
